@@ -27,43 +27,51 @@ function TShapeCalculator() {
     }
 
     function createInput() {
+
+        function getElementById(domId) {
+            const defaultElement = {value: 0};
+            const element = document.getElementById(domId) || defaultElement;
+            return element;
+        }
+
+
         // 获取输入参数
         // const m = parseFloat(document.getElementById('m').value);
-        const bf = parseFloat(document.getElementById('bf').value);
-        const n = parseFloat(document.getElementById('n').value);
-        const tf = parseFloat(document.getElementById('tf').value);
-        const lf = parseFloat(document.getElementById('lf').value);
-        const fy = parseFloat(document.getElementById('fy').value);
-        const E = parseFloat(document.getElementById('E').value);
-        const Eh = parseFloat(document.getElementById('Eh').value);
-        const Enk = parseFloat(document.getElementById('Enk').value);
-        const boltDiameter = parseFloat(document.getElementById('boltDiameter').value);
-        const boltLength = parseFloat(document.getElementById('boltLength').value);
-        const boltHeadDiameter = parseFloat(document.getElementById('boltHeadDiameter').value);
-        const loadSpeed = parseFloat((document.getElementById('loadSpeed') || {value: 0}).value);
-        const washerDiameter = parseFloat(document.getElementById('washerDiameter').value);
-        const washerThick = parseFloat(document.getElementById('washerThick').value);
-        const epsilon_h = parseFloat(document.getElementById('epsilon_h').value);
-        const epsilon_m = parseFloat(document.getElementById('epsilon_m').value);
-        const epsilon_u = parseFloat(document.getElementById('epsilon_u').value);
-        const D_bolt = parseFloat(document.getElementById('D_bolt').value);
-        const p_bolt = parseFloat(document.getElementById('p_bolt').value);
-        const D_flange = parseFloat(document.getElementById('D_flange').value);
-        const p_flange = parseFloat(document.getElementById('p_flange').value);
+        const bf = parseFloat(getElementById('bf').value);
+        const n = parseFloat(getElementById('n').value);
+        const tf = parseFloat(getElementById('tf').value);
+        const lf = parseFloat(getElementById('lf').value);
+        const fy = parseFloat(getElementById('fy').value);
+        const E = parseFloat(getElementById('E').value);
+        const Eh = parseFloat(getElementById('Eh').value);
+        const Enk = parseFloat(getElementById('Enk').value);
+        const boltDiameter = parseFloat(getElementById('boltDiameter').value);
+        const boltLength = parseFloat(getElementById('boltLength').value);
+        const boltHeadDiameter = parseFloat(getElementById('boltHeadDiameter').value);
+        const loadSpeed = parseFloat((getElementById('loadSpeed') || {value: 0}).value);
+        const washerDiameter = parseFloat(getElementById('washerDiameter').value);
+        const washerThick = parseFloat(getElementById('washerThick').value);
+        const epsilon_h = parseFloat(getElementById('epsilon_h').value);
+        const epsilon_m = parseFloat(getElementById('epsilon_m').value);
+        const epsilon_u = parseFloat(getElementById('epsilon_u').value);
+        const D_bolt = parseFloat(getElementById('D_bolt').value)  || 1300000;
+        const p_bolt = parseFloat(getElementById('p_bolt').value) || 3.6;
+        const D_flange = parseFloat(getElementById('D_flange').value) || 4945;
+        const p_flange = parseFloat(getElementById('p_flange').value) || 2.7;
 
         // 螺栓屈服应变
-        const boltQuFuEpsilon = parseFloat(document.getElementById('boltQuFuEpsilon').value);
+        const boltQuFuEpsilon = parseFloat(getElementById('boltQuFuEpsilon').value);
         // 螺栓峰值应变
-        const boltFengZhiEpsilon = parseFloat(document.getElementById('boltFengZhiEpsilon').value);
+        const boltFengZhiEpsilon = parseFloat(getElementById('boltFengZhiEpsilon').value);
         // 螺栓断裂应变
-        const boltDuanLieEpsilon = parseFloat(document.getElementById('boltDuanLieEpsilon').value);
+        const boltDuanLieEpsilon = parseFloat(getElementById('boltDuanLieEpsilon').value);
 
         // 螺栓屈服强度
-        const boltQuFuForce = parseFloat(document.getElementById('boltQuFuForce').value);
+        const boltQuFuForce = parseFloat(getElementById('boltQuFuForce').value);
         // 螺栓峰值强度
-        const boltFengZhiForce = parseFloat(document.getElementById('boltFengZhiForce').value);
+        const boltFengZhiForce = parseFloat(getElementById('boltFengZhiForce').value);
         // 螺栓断裂强度
-        const boltDuanLieForce = parseFloat(document.getElementById('boltDuanLieForce').value);
+        const boltDuanLieForce = parseFloat(getElementById('boltDuanLieForce').value);
 
 
         // m 依赖于 翼缘厚度 和 n 值
@@ -419,7 +427,7 @@ console.log(`
 
 
             // 第八步：最终计算K49和K50
-            const K49 = calculateK49(J47, J48, J49);
+            const K49 = calculateK49(J42, J47, J48, J49);
             // const K50 = calculateK50(J50, J47, J48, J49, N49, m, tf, D42);
             const K50 = calculateK50(J47, J40);
 
@@ -427,10 +435,10 @@ console.log(`
             const J53 = calculateJ53(D14, D6, D5, D2);
 
             // 翼缘速率 mm/s
-            const J54 = calculateJ54(J39, J47, J49, K49, D4);
+            const J54 = calculateJ54(J39,  K49, K50, D4);
 
-            //
-            const J56 = calculateJ56(J39, J47, J49, K49, D4);
+            // 螺栓速率  mm/s
+            const J56 = calculateJ56(J39, K49, K50, D4);
 
             // 翼缘边缘应变率
             const J57 = calculateJ57(J54, D5, J43, D2);
@@ -572,7 +580,7 @@ console.log(`
             // J49：失效模式阈值
             // K49：失效模式过渡系数
             // D4：几何参数 λ = n/m
-            function calculateJ54(J39, J47, J49, K49, D4) {
+            function calculateJ54_BAK(J39, J47, J49, K49, D4) {
                 // Excel公式: =J39/2*IF(J47>J49,K49/(1+D4),1-D4*K49/(1+D4))
 
                 // 第一部分: J39/2
@@ -591,10 +599,21 @@ console.log(`
                 // 最终结果
                 return baseTerm * conditionTerm;
             }
+            function calculateJ54(J39,  K49,  K50, D4) {
+                // Excel公式: =J39/2*(K49*D4+K50)/(1+D4)
+
+                // 第一部分: J39/2
+                const baseTerm = J39 / 2;
+                const term1 = K49 * D4 + K50;
+                const term2 = 1 + D4;
+
+                // 最终结果
+                return baseTerm * term1 / term2;
+            }
 
             // J56计算函数
             // J56=J39*IF(J47>J49,1-K49/(1+D4),D4*K49/(1+D4))
-            function calculateJ56(J39, J47, J49, K49, D4) {
+            function calculateJ56_BAK(J39, J47, J49, K49, D4) {
                 // 参数验证
                 if (typeof J39 !== 'number' || typeof J47 !== 'number' ||
                     typeof J49 !== 'number' || typeof K49 !== 'number' ||
@@ -622,6 +641,28 @@ console.log(`
                 }
 
                 const result = J39 * conditionTerm;
+                // console.log(`J56最终结果: ${J39} * ${conditionTerm} = ${result}`);
+
+                return result;
+            }
+            function calculateJ56(J39,  K49,  K50, D4) {
+
+                // := J39*(1-(K49*D4+K50)/(1+D4))
+
+                // 参数验证
+                if (typeof J39 !== 'number' || typeof J49 !== 'number' || typeof K50 !== 'number' || typeof D4 !== 'number') {
+                    // console.error("J56计算错误: 所有参数必须为数字");
+                    return 0;
+                }
+
+                // 避免除零错误
+                if (1 + D4 === 0) {
+                    // console.warn("J56计算警告: 1+D4为0，返回0");
+                    return 0;
+                }
+
+
+                const result = J39 * (1 - (K49*D4+K50) / (1+D4) );
                 // console.log(`J56最终结果: ${J39} * ${conditionTerm} = ${result}`);
 
                 return result;
@@ -704,7 +745,7 @@ console.log(`
 
 
             // =IF(J47>J49,0,IF(J47<J48,1,(J49-J47)/(J49-J48)))
-            function calculateK49(J47, J48, J49) {
+            function calculateK49_BAK(J47, J48, J49) {
                 if (J47 > J49) {
                     return 0;
                 } else if (J47 < J48) {
@@ -713,7 +754,16 @@ console.log(`
                     return (J49 - J47) / (J49 - J48);
                 }
             }
-
+            function calculateK49(J42, J47, J48, J49) {
+                // =IF(J47>J49,0,IF(J47<J48/J42,1,(J49-J47)/(J49-J48/J42)))
+                if (J47 > J49) {
+                    return 0;
+                } else if (J47 < J48/J42) {
+                    return 1;
+                } else {
+                    return (J49 - J47) / (J49 - J48/J42);
+                }
+            }
 
             // =IF(J47>2*J40,0,IF(J47>1.63,(2-J47)/(2-1.63),1))
             // function calculateK50(J50, J47, J48, J49, N49, D2, D5, D42) {
@@ -728,7 +778,7 @@ console.log(`
             //     }
             // }
             // K50单元格的计算方法
-            function calculateK50(J47, J40) {
+            function calculateK50_BAK(J47, J40) {
                 // Excel公式: =IF(J47>2*J40,0,IF(J47>1.63,(2-J47)/(2-1.63),1))
                 // J47 = β值 = 2Mp/(m*Bu)
                 // J40 = 阈值参数
@@ -737,6 +787,20 @@ console.log(`
                     return 0;
                 } else if (J47 > 1.63) {
                     return (2 - J47) / (2 - 1.63);
+                } else {
+                    return 1;
+                }
+            }
+
+            function calculateK50(J47, J40) {
+                // Excel公式: =IF(J47>2*J40,0,IF(J47>1.63,(2*J40-J47)/(2*J40-1.63),1))
+                // J47 = β值 = 2Mp/(m*Bu)
+                // J40 = 阈值参数
+
+                if (J47 > 2 * J40) {
+                    return 0;
+                } else if (J47 > 1.63) {
+                    return (2 * J40 - J47) / (2 * J40 - 1.63);
                 } else {
                     return 1;
                 }
