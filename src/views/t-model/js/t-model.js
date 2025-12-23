@@ -97,7 +97,9 @@ function TShapeCalculator() {
         // m值 =(180-D5)/2-D3-0.8*D5
         // 依赖于 翼缘厚度 和 n 值
         function calculateM(bf, tf, n) {
-            // (0.8 * tf)： 认为翼缘厚度 约等于 腹板厚度
+            // (0.8 * tf)： 焊脚尺寸, 约为厚度的0.8倍
+            // 认为翼缘（web）厚度 约等于 腹板厚度
+            // bf = 2(m+n+0.8tf) + webTf
             return (bf - tf) / 2 - n - (0.8 * tf);
         }
 
@@ -251,15 +253,65 @@ function TShapeCalculator() {
                 return {My, Mh, Mm, Mu, Mp};
             }
 
-// x: 点的曲率
-// 返回 弯矩值
-// 根据曲率计算弯矩
-            function calculateBendingMoment(curvature) {
 
+            /**
+             * @desc:
+             *
+             *   x: 点的曲率
+             *   返回 弯矩值
+             *   根据曲率计算弯矩,  j58 是弯矩放大系数， 静态没有速度时默认是 1， 有速度动态时，其值应大于1
+             *
+             *
+             *  公式I计算弯矩：  =(IF(H9<$D$21,H9/$D$21*$D$27,IF(H9<$D$22,(H9/$D$21+0.5*(3-2*H9/$D$21-($D$21/H9)^2))*$D$27,IF(H9<$D$23,(H9/$D$21+0.5*(3-2*H9/$D$21-($D$21/H9)^2)+0.5*$D$15/$D$14*(H9/$D$21-$D$22/D$21)*(1-D$22/H9)*(2+D$22/H9))*$D$27,(H9/$D$21+0.5*(3-2*H9/D$21-($D$21/H9)^2)+0.5*$D$15/$D$14*(H9/$D$21-$D$22/$D$21)*(1-$D$22/H9)*(2+$D$22/H9)-0.5*($D$15-$D$16)/$D$14*(H9/$D$21-$D$23/$D$21)*(1-$D$23/H9)*(2+$D$23/H9))*$D$27))))*$J$58
+             *
+             *    = ( IF(...) ) * $J$58
+             *     ↑            ↑
+             *    整个IF表达式    最后乘的系数
+             *
+             *    1. 基本结构
+             *       (分段弯矩计算) * 弯矩放大系数
+             *
+             *    2. 详细分拆
+                     基础弯矩 = IF(
+                         H9 < D21,                      ← 条件1：弹性阶段
+                         H9/D21*D27,                    ← 结果1：线性弹性
+
+                         IF(H9 < D22,                   ← 条件2：屈服平台
+                             (H9/D21 + 0.5*(3-2*H9/D21-(D21/H9)^2))*D27,                                ← 结果2
+
+                             IF(H9 < D23,               ← 条件3：强化阶段
+
+                                 (H9/D21 + 0.5*(3-2*H9/D21-(D21/H9)^2)
+                                 + 0.5*D15/D14*(H9/D21-D22/D21)*(1-D22/H9)*(2+D22/H9))*D27,             ← 结果3
+
+                                 (H9/D21 + 0.5*(3-2*H9/D21-(D21/H9)^2)
+                                 + 0.5*D15/D14*(H9/D21-D22/D21)*(1-D22/H9)*(2+D22/H9)
+                                 - 0.5*(D15-D16)/D14*(H9/D21-D23/D21)*(1-D23/H9)*(2+D23/H9))*D27        ← 结果4
+                             )
+                         )
+                     )
+             *
+             *
+             * @param curvature
+             * @param j58
+             * @returns {number}
+             */
+            function calculateBendingMoment(curvature, j58 = 1) {
                 const {
                     bf, n, tf, m, lf,
                     fy, E, Eh, Enk
                 } = inputParams;
+
+
+
+                // 角度和速率有关系， J58
+                // 动态计算是增加了个DM*（Excel中的J58），这个参数是大于1的，这个数据和翼缘速率有关（Excel中的J54）
+                // let J58 = intermediateData.CaValues.J58 || 1; // 等于1，相当于没有速度，静态
+                // if (J58 === 0) {
+                //     J58 = 1;
+                // }
+
+
 
                 // 屈服曲率
                 // const Xy = 2 * epsilon_y / tf;
@@ -291,7 +343,7 @@ function TShapeCalculator() {
                 // 屈服弯矩, lf 宽度， tf厚度， fy(屈服应力410) = E(弹性模量) * epsilon_y(屈服应变)
                 const My = lf * tf * tf * fy / 6;
 
-                const Ma = (item1 + item2 - item3) * My;
+                const Ma = (item1 + item2 - item3) * My * j58;
 
                 return Ma;
 
@@ -301,6 +353,9 @@ function TShapeCalculator() {
             // 计算转角θ
             // Xa： 该点a的曲率X
             function calculateTheta(Xa) {
+
+                // excel公式： K9 = $D$2/(1+$J$51)*(H9-$D$27/I9*$J$58*J9-0.5*$D$21*I9/$J$58/$D$27)
+
                 // 计算θ的参数
                 function  thetaCa() {
                     const item1 = Math.pow(Xa, 3) / (2 * Xa * Xy) -  Math.pow(Xa - Xy, 3) / (2 * Xa * Xy) * H(Xa, Xy);
@@ -312,9 +367,22 @@ function TShapeCalculator() {
                 // ψ: J51, thy
                 const thy = intermediateData.CaValues.J51;
 
-                const Ma = calculateBendingMoment(Xa);
 
-                const theta = m / (1 + thy) * (Xa - My / Ma * thetaCa() - 0.5 * Xy * Ma / My);
+
+                // 角度和速率有关系， J58
+                // 动态计算是增加了个DM*（Excel中的J58），这个参数是大于1的，这个数据和翼缘速率有关（Excel中的J54）
+                let J58 = intermediateData.CaValues.J58;
+                if (J58 === 0) {
+                    J58 = 1; // 等于1，相当于没有速度，静态
+                }
+
+
+                const Ma = calculateBendingMoment(Xa, J58);
+
+                const Ca = thetaCa();
+                console.log(`calculateTheta, J58:`, J58);
+
+                const theta = m / (1 + thy) * (Xa - My / Ma * Ca * J58 - 0.5 * Xy * Ma / My / J58);
 
                 return {theta, Ma};
             }
@@ -406,10 +474,10 @@ console.log(`
             // J49 --- β2;
 
             // const J46 = Mp / Mm;
-            // J46: ξ = Mp/Mu，
+            // J46: ξ = Mp/Mu， 取静态Mp, Mu值计算中间值J46
             const J46 = intermediateData.flangeKeyMas.Mp / intermediateData.flangeKeyMas.Mu;
 
-            // J47 = β = 2Mp/(m*Bu)
+            // J47 = β = 2Mp/(m*Bu)， 取静态Mp, Bu值计算中间值J47
             const J47 = 2 * intermediateData.flangeKeyMas.Mp / (m * intermediateData.boltKeyPointsData.Bu);
 
             // J48, J49 - 失效模式阈值
@@ -814,7 +882,7 @@ console.log(`
                 const FBy = By * J59 * J52;
 
                 console.log(`
-                    By * J59 * J52: ${By} * ${J59} * ${J59} 
+                    By * J59 * J52: ${By} * ${J59} * ${J52} 
                 `);
 
                 // 从螺栓峰值荷载算出力F
@@ -874,6 +942,9 @@ console.log(`
             // K 列， 转角值列表
             const thetas = [];
 
+            // K 列， 转角值列表
+            const thetaAndMas = [];
+
             // L 列， 受力插值列表
             const predictForces = [];
             // ψ: J51, thy
@@ -881,11 +952,12 @@ console.log(`
             Xs.map(X => {
                 const {theta, Ma} = flangeService.calculateTheta(X);
                 thetas.push(theta);
+                thetaAndMas.push({theta, Ma});
                 const force = 2 * Ma * (1 + thy) / ( m * Math.cos(theta));
                 predictForces.push(force);
             });
 
-            return {Xs, thetas, predictForces};
+            return {Xs, thetas, predictForces, thetaAndMas};
         }
 
 
@@ -1020,7 +1092,8 @@ console.log(`
             ];
             flangePoints = flangePoints.map(i => {
                 const {theta, Ma} = flangeService.calculateTheta(i.c);
-                const forceMove = flangeForceAndMove(i.Ma, theta);
+                // const forceMove = flangeForceAndMove(i.Ma, theta); // 此i.Ma为静态没速率时的值
+                const forceMove = flangeForceAndMove(Ma, theta); // Ma考虑有速度因素
                 i.x = forceMove.move;
                 i.y = forceMove.force;
                 return i;

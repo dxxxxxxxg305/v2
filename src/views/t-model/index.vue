@@ -89,7 +89,25 @@
 
           <div class="input-group-head">
             <div class="h-item h-left"><h3>几何尺寸</h3></div>
-            <div class="h-item h-right"><img src="./images/t-stub.svg"/></div>
+            <div class="h-item h-right">
+<!--              <img src="./images/t-stub.svg"/>-->
+              <el-popover placement="right" width="300"  trigger="click">
+                <template #reference>
+                  <img src="./images/t-stub.svg" alt=""/>
+                </template>
+                <template #default>
+                  <div class="t-stub-desc-popover">
+
+                    <ul style="margin: 0 0 0 1rem;">
+                      <li>(0.8 * tf)： 焊脚尺寸, 厚度的0.8倍</li>
+                      <li>翼缘厚度（tf） 等于 腹板厚度（webTf）</li>
+                      <li>bf = 2(m+n+0.8tf) + webTf , 即：</li>
+                      <li>bf = 2(m+n+0.8tf) + tf</li>
+                    </ul>
+                  </div>
+                </template>
+              </el-popover>
+            </div>
           </div>
 
           <div class="form-group">
@@ -259,7 +277,7 @@ onMounted(() => {
     initChart()
   }
 
-  window.addEventListener('resize', () => chartInstance.resize());
+  window.addEventListener('resize', () => chartInstance?.resize());
 
 });
 
