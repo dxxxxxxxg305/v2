@@ -361,7 +361,7 @@ const startCalculate = () => {
 }
 
 #rsDynamicInfo {
-  color: chocolate;
+  //color: chocolate;
 }
 .is_static {
   #rsDynamicInfo {
