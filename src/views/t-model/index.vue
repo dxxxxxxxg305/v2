@@ -242,6 +242,7 @@
             <div id="failureModeResult">等待计算...</div>
           </h3>
 
+          <div id="rsDynamicInfo"></div>
         </div>
 
         <div class="chart-container" id="chart" ref="chartRef"></div>
@@ -358,4 +359,15 @@ const startCalculate = () => {
     }
   }
 }
+
+#rsDynamicInfo {
+  color: chocolate;
+}
+.is_static {
+  #rsDynamicInfo {
+    display: none;
+  }
+}
+
+
 </style>

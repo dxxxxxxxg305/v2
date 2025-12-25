@@ -21,9 +21,10 @@ function TShapeCalculator() {
         // 全部输入参数
         const inputParams = createInput();
         const calService = calculateTShapeService(inputParams);
-        const allPoints = calService.calculateForceAndDelta();
-        const failureMode = calService.calculateFailureMode();
-        createOutput(allPoints, failureMode);
+        // const allPoints = calService.calculateForceAndDelta();
+        // const failureMode = calService.calculateFailureMode();
+        // createOutput(allPoints, failureMode);
+        createOutput(calService);
     }
 
     function createInput() {
@@ -111,9 +112,14 @@ function TShapeCalculator() {
 
 
     function calculateTShapeService(inputParams = {}) {
+
+        // 计算中间值
+        const intermediateData = {};
+
         const service = {
             calculateForceAndDelta, // 计算7个点的受力F及其位移Delta
             calculateFailureMode, // 计算失效模式
+            intermediateData, // 暴露计算出来的中间值给外面
         };
 
         const {
@@ -131,8 +137,6 @@ function TShapeCalculator() {
         const  boltService = createBoltService();
 
 
-        // 计算中间值
-        const intermediateData = {};
 
         // 先算翼缘相关数据， 螺栓数据依赖翼缘的数据
         const flangeData = {
@@ -1360,8 +1364,13 @@ console.log(`
         return options;
     }
 
-    function createOutput(allPoints, failureMode) {
+    // function createOutput(allPoints, failureMode) {
+    function createOutput(calService) {
 
+        let allPoints = calService.calculateForceAndDelta();
+        const failureMode = calService.calculateFailureMode();
+
+        // 用千牛做单位
         allPoints = useKnUnit();
 
         // 页面加载时初始化图表
@@ -1382,6 +1391,16 @@ console.log(`
         function displayResults(points, failureMode) {
             // 显示失效模式
             document.getElementById('failureModeResult').innerHTML = `<strong>${failureMode}</strong>`;
+
+            // 显示动态计算的信息
+            const flangeSpeed = calService.intermediateData.CaValues.J54.toFixed(3);
+            const boltSpeed = calService.intermediateData.CaValues.J56.toFixed(3);
+            const dySpeedInfo = `
+                翼缘变形速度: <span>${flangeSpeed}</span> mm/s,  
+                螺栓变形速度: <span>${boltSpeed}</span> mm/s 
+            `;
+            document.getElementById('rsDynamicInfo').innerHTML = dySpeedInfo;
+
 
             // 显示关键数据点
             let pointsHTML = '';
